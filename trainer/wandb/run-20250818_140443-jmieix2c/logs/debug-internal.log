@@ -1,0 +1,9 @@
+{"time":"2025-08-18T14:04:43.418141196+08:00","level":"INFO","msg":"using version","core version":"0.18.3"}
+{"time":"2025-08-18T14:04:43.418173445+08:00","level":"INFO","msg":"created symlink","path":"/home/user/workspace/minimind/trainer/wandb/run-20250818_140443-jmieix2c/logs/debug-core.log"}
+{"time":"2025-08-18T14:04:43.423957559+08:00","level":"ERROR","msg":"dialing: google: could not find default credentials. See https://cloud.google.com/docs/authentication/external/set-up-adc for more information"}
+{"time":"2025-08-18T14:04:43.438324092+08:00","level":"INFO","msg":"created new stream","id":"jmieix2c"}
+{"time":"2025-08-18T14:04:43.438366154+08:00","level":"INFO","msg":"stream: started","id":"jmieix2c"}
+{"time":"2025-08-18T14:04:43.438405058+08:00","level":"INFO","msg":"handler: started","stream_id":{"value":"jmieix2c"}}
+{"time":"2025-08-18T14:04:43.4383854+08:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"jmieix2c"}}
+{"time":"2025-08-18T14:04:43.438397153+08:00","level":"INFO","msg":"sender: started","stream_id":{"value":"jmieix2c"}}
+{"time":"2025-08-18T14:04:53.853611175+08:00","level":"INFO","msg":"stream: closing","id":"jmieix2c"}

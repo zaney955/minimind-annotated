@@ -29,47 +29,77 @@ def Logger(content):
 def get_lr(current_step, total_steps, lr):
     return lr / 10 + 0.5 * lr * (1 + math.cos(math.pi * current_step / total_steps))
 
-
-def logits_to_probs(logits, labels):
+# 把 模型输出的 logits 转换为 对应标签的对数概率
+def logits_to_logprobs(logits, labels):
     # logits shape: (batch_size, seq_len, vocab_size)
     # labels shape: (batch_size, seq_len)
     # probs shape: (batch_size, seq_len)
-    log_probs = F.log_softmax(logits, dim=2)
-    probs = torch.gather(log_probs, dim=2, index=labels.unsqueeze(2)).squeeze(-1)
+    # Step 1: 计算每个 token 的 log-softmax 概率
+    log_probs = F.log_softmax(logits, dim=2)  
+    # log_probs: (batch_size, seq_len, vocab_size)
+
+    # Step 2: 收集 labels 对应的 log 概率
+    
+    # torch.gather(..., dim=2): 从 log_probs 的第3维（vocab_size）中选择对应 label 的概率
+    probs = torch.gather(log_probs, dim=2, 
+                         index=labels.unsqueeze(2))  # labels.unsqueeze(2): (batch_size, seq_len, 1)
+    # probs: (batch_size, seq_len, 1)
+
+    probs = probs.squeeze(-1)   # probs: (batch_size, seq_len)  => 每个 token 的 log-probability
+   
     return probs
 
 
-def dpo_loss(ref_probs, probs, mask, beta):
-    # ref_probs 和 probs 都是 shape: (batch_size, seq_len)
+def dpo_loss(ref_logprobs, logprobs, mask, beta):
+    # ref_logprobs 和 logprobs 都是 shape: (batch_size, seq_len)
     # https://github.com/jingyaogong/minimind/issues/298
+    """
+    计算DPO (Direct Preference Optimization) 损失函数
+    Args:
+        ref_logprobs (torch.Tensor): 参考模型的对数概率，shape: (batch_size, seq_len)
+        logprobs (torch.Tensor): 当前模型的对数概率，shape: (batch_size, seq_len)
+        mask (torch.Tensor): 用于标记哪些 token 被计入损失（如生成部分），shape: (batch_size, seq_len)
+        beta (float): DPO损失函数中的温度参数，控制优化强度
+        
+    Returns:
+        torch.Tensor: 平均DPO损失值
+    """
+    # Step 1: 每个样本的有效长度（非 padding 部分 token 的数量）
     seq_lengths = mask.sum(dim=1, keepdim=True)  # (batch_size, 1)
-    ref_probs = (ref_probs * mask).sum(dim=1) / seq_lengths.squeeze()
-    probs = (probs * mask).sum(dim=1) / seq_lengths.squeeze()
+    # Step 2: 对每个样本计算平均 log-probs，仅在 mask == 1 的位置有效
+    ref_logprobs = (ref_logprobs * mask).sum(dim=1) / seq_lengths.squeeze()
+    logprobs = (logprobs * mask).sum(dim=1) / seq_lengths.squeeze()
 
-    # 将 chosen 和 rejected 数据分开
-    batch_size = ref_probs.shape[0]
-    chosen_ref_probs = ref_probs[:batch_size // 2]
-    reject_ref_probs = ref_probs[batch_size // 2:]
-    chosen_probs = probs[:batch_size // 2]
-    reject_probs = probs[batch_size // 2:]
+    # Step 3: 将 batch 划分为前一半为 chosen，后一半为 rejected
+    batch_size = ref_logprobs.shape[0]
+    
+    chosen_ref_logprobs = ref_logprobs[:batch_size // 2]  # (batch_size // 2,)
+    reject_ref_logprobs = ref_logprobs[batch_size // 2:]  # (batch_size // 2,)
+    chosen_logprobs = logprobs[:batch_size // 2]  # (batch_size // 2,)
+    reject_logprobs = logprobs[batch_size // 2:]  # (batch_size // 2,)
 
-    pi_logratios = chosen_probs - reject_probs
-    ref_logratios = chosen_ref_probs - reject_ref_probs
-    logits = pi_logratios - ref_logratios
-    loss = -F.logsigmoid(beta * logits)
-    return loss.mean()
+    # Step 4: log-ratio 比较（策略模型 vs 参考模型）  
+    pi_logratios = chosen_logprobs - reject_logprobs  # (batch_size // 2,)
+    ref_logratios = chosen_ref_logprobs - reject_ref_logprobs  # (batch_size // 2,)
+    
+    # Step 5: DPO 损失计算，鼓励 chosen 比 rejected 的分数更高
+    # 参考模型通常是一个 未微调的语言模型 或 行为基线，它体现了“自然语言生成的默认概率分布”,DPO 不只是让模型更偏向chosen,而是 让模型比参考模型更偏向chosen
+    logits = pi_logratios - ref_logratios  # (batch_size // 2,) 
+    loss = -F.logsigmoid(beta * logits)  # (batch_size // 2,)  # sigmoid将logits映射到(0,1)区间；log将其映射到(-∞,0]区间；负号将其转为[0,+∞)区间，符合最小化目标。beta让sigmoid的曲线变化更平滑（控制优化强度）
+    return loss.mean() # 标量，.mean()等价于DPO loss数学公式中的期望符号E
 
 
 def train_epoch(epoch, wandb):
     start_time = time.time()
     for step, batch in enumerate(train_loader):
-        x_chosen = batch['x_chosen'].to(args.device)
+        x_chosen = batch['x_chosen'].to(args.device)  # (batch_size, seq_len)
         x_rejected = batch['x_rejected'].to(args.device)
         y_chosen = batch['y_chosen'].to(args.device)
         y_rejected = batch['y_rejected'].to(args.device)
         mask_chosen = batch['mask_chosen'].to(args.device)
         mask_rejected = batch['mask_rejected'].to(args.device)
-        x = torch.cat([x_chosen, x_rejected], dim=0)
+        
+        x = torch.cat([x_chosen, x_rejected], dim=0)  # (2*batch_size, seq_len)
         y = torch.cat([y_chosen, y_rejected], dim=0)
         mask = torch.cat([mask_chosen, mask_rejected], dim=0)
 
@@ -81,13 +111,13 @@ def train_epoch(epoch, wandb):
             with torch.no_grad():
                 ref_outputs = ref_model(x)
                 ref_logits = ref_outputs.logits
-            ref_probs = logits_to_probs(ref_logits, y)
-            ref_probs = ref_probs * mask
+            ref_logprobs = logits_to_logprobs(ref_logits, y)
+            ref_logprobs = ref_logprobs * mask
             outputs = model(x)
             logits = outputs.logits
-            probs = logits_to_probs(logits, y)
-            probs = probs * mask
-            loss = dpo_loss(ref_probs, probs, mask, beta=0.1)
+            logprobs = logits_to_logprobs(logits, y)
+            logprobs = logprobs * mask
+            loss = dpo_loss(ref_logprobs, logprobs, mask, beta=0.1)
             loss = loss / args.accumulation_steps
 
         scaler.scale(loss).backward()

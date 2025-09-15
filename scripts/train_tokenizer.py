@@ -1,11 +1,11 @@
 import random
 import json
 from tokenizers import (
-    decoders,
-    models,
-    pre_tokenizers,
-    trainers,
-    Tokenizer,
+    models,  # token 的核心算法
+    pre_tokenizers,  # 文本预切分
+    trainers,  # 训练词表
+    decoders,  #  id → token → 文本的还原规则
+    Tokenizer,  # 总控，组合并调用以上模块
 )
 import os
 
@@ -20,28 +20,32 @@ def train_tokenizer():
                 data = json.loads(line)
                 yield data['text']
 
-    data_path = '../dataset/pretrain_hq.jsonl'
+    data_path = 'dataset/pretrain_hq.jsonl'
 
     # 初始化tokenizer
-    tokenizer = Tokenizer(models.BPE())
-    tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False)
+    tokenizer = Tokenizer(models.BPE())  # 创建了一个 分词器实例，底层使用 BPE (Byte Pair Encoding) 作为核心模型，该分词器使用BPE算法将文本拆分成子词单元，以增强模型对未登录词和低频词的处理能力
+    tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False)  # ByteLevel表示采用字节级别的预处理，能处理任何 Unicode 字符，通过字节编码避免未登录词问题.add_prefix_space=False表示不在文本开头添加空格，默认情况下有时会添加空格来区分词边界
 
     # 定义特殊token
     special_tokens = ["<|endoftext|>", "<|im_start|>", "<|im_end|>"]
 
     # 设置训练器并添加特殊token
-    trainer = trainers.BpeTrainer(
-        vocab_size=6400,
-        special_tokens=special_tokens,  # 确保这三个token被包含
-        show_progress=True,
-        initial_alphabet=pre_tokenizers.ByteLevel.alphabet()
+    bpe_trainer = trainers.BpeTrainer(
+        vocab_size=6400,  # 词表大小限制为 6400 个 token
+        special_tokens=special_tokens,  # 确保这三个token被包含，保证它们有专属的 id，不会被拆开
+        show_progress=True,  # 在训练过程中显示进度条，方便你看训练到哪一步了
+        initial_alphabet=pre_tokenizers.ByteLevel.alphabet()  # 返回一个完整的 字节字母表（0–255），确保所有字节都能被表示
     )
 
     # 读取文本数据
     texts = read_texts_from_jsonl(data_path)
+    
+    print(list(texts)[1])
+
+    pass
 
     # 训练tokenizer
-    tokenizer.train_from_iterator(texts, trainer=trainer)
+    tokenizer.train_from_iterator(texts, trainer=bpe_trainer)
 
     # 设置解码器
     tokenizer.decoder = decoders.ByteLevel()
@@ -52,10 +56,10 @@ def train_tokenizer():
     assert tokenizer.token_to_id("<|im_end|>") == 2
 
     # 保存tokenizer
-    tokenizer_dir = "../model/"
+    tokenizer_dir = "model-/"
     os.makedirs(tokenizer_dir, exist_ok=True)
-    tokenizer.save(os.path.join(tokenizer_dir, "tokenizer.json"))
-    tokenizer.model.save("../model/")
+    tokenizer.save(os.path.join(tokenizer_dir, "tokenizer.json"))  # 保存的是 整个 Tokenizer 配置（单文件 tokenizer.json）
+    tokenizer.model.save(tokenizer_dir)  # 只保存 BPE 模型相关的文件（vocab.json 和 merges.txt）
 
     # 手动创建配置文件
     config = {
@@ -113,7 +117,7 @@ def eval_tokenizer():
     from transformers import AutoTokenizer
 
     # 加载预训练的tokenizer
-    tokenizer = AutoTokenizer.from_pretrained("../model/")
+    tokenizer = AutoTokenizer.from_pretrained("model-/")
 
     messages = [
         {"role": "system", "content": "你是一个优秀的聊天机器人，总是给我正确的回应！"},
@@ -139,7 +143,7 @@ def eval_tokenizer():
 
 
 def main():
-    train_tokenizer()
+    # train_tokenizer()
     eval_tokenizer()
 
 

@@ -1,0 +1,11 @@
+{"time":"2025-08-15T14:52:38.867723835+08:00","level":"INFO","msg":"using version","core version":"0.18.3"}
+{"time":"2025-08-15T14:52:38.867739572+08:00","level":"INFO","msg":"created symlink","path":"/home/user/workspace/minimind/trainer/wandb/run-20250815_145238-rmepexad/logs/debug-core.log"}
+{"time":"2025-08-15T14:52:38.871528957+08:00","level":"ERROR","msg":"dialing: google: could not find default credentials. See https://cloud.google.com/docs/authentication/external/set-up-adc for more information"}
+{"time":"2025-08-15T14:52:38.886815256+08:00","level":"INFO","msg":"created new stream","id":"rmepexad"}
+{"time":"2025-08-15T14:52:38.886854853+08:00","level":"INFO","msg":"stream: started","id":"rmepexad"}
+{"time":"2025-08-15T14:52:38.886881558+08:00","level":"INFO","msg":"handler: started","stream_id":{"value":"rmepexad"}}
+{"time":"2025-08-15T14:52:38.886955247+08:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"rmepexad"}}
+{"time":"2025-08-15T14:52:38.887025881+08:00","level":"INFO","msg":"sender: started","stream_id":{"value":"rmepexad"}}
+{"time":"2025-08-15T14:53:08.888242304+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2025-08-15T14:53:41.096139786+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2025-08-15T14:53:46.121243211+08:00","level":"INFO","msg":"stream: closing","id":"rmepexad"}

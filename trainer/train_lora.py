@@ -169,40 +169,62 @@ if __name__ == "__main__":
     else:
         wandb = None
 
-    model, tokenizer = init_model(lm_config)
-    apply_lora(model)
+# 初始化模型和分词器
+model, tokenizer = init_model(lm_config)
 
-    total_params = sum(p.numel() for p in model.parameters())  # 总参数数量
-    lora_params_count = sum(p.numel() for name, p in model.named_parameters() if 'lora' in name)  # LoRA 参数数量
-    if not ddp or dist.get_rank() == 0:
-        print(f"LLM 总参数量: {total_params}")
-        print(f"LoRA 参数量: {lora_params_count}")
-        print(f"LoRA 参数占比: {lora_params_count / total_params * 100:.2f}%")
+# 注入 LoRA 模块（低秩适配器）
+apply_lora(model)
 
-    for name, param in model.named_parameters():
-        if 'lora' not in name:
-            param.requires_grad = False
-    lora_params = []
-    for name, param in model.named_parameters():
-        if 'lora' in name:
-            lora_params.append(param)
+# 计算总参数量
+total_params = sum(p.numel() for p in model.parameters())
 
-    # 只对 LoRA 参数进行优化
-    optimizer = optim.AdamW(lora_params, lr=args.learning_rate)
-    train_ds = SFTDataset(args.data_path, tokenizer, max_length=args.max_seq_len)
-    train_sampler = DistributedSampler(train_ds) if ddp else None
-    train_loader = DataLoader(
-        train_ds,
-        batch_size=args.batch_size,
-        pin_memory=True,
-        drop_last=False,
-        shuffle=False,
-        num_workers=args.num_workers,
-        sampler=train_sampler
-    )
+# 计算所有带有 "lora" 名字的参数量（即 LoRA 层的参数）
+lora_params_count = sum(p.numel() for name, p in model.named_parameters() if 'lora' in name)
 
-    scaler = torch.cuda.amp.GradScaler(enabled=(args.dtype in ['float16', 'bfloat16']))
-    iter_per_epoch = len(train_loader)
+# 只在主进程中打印参数信息（DDP 分布式时）
+if not ddp or dist.get_rank() == 0:
+    print(f"LLM 总参数量: {total_params}")
+    print(f"LoRA 参数量: {lora_params_count}")
+    print(f"LoRA 参数占比: {lora_params_count / total_params * 100:.2f}%")
 
-    for epoch in range(args.epochs):
-        train_epoch(epoch, wandb)
+# 冻结除 LoRA 外的所有参数，只训练 LoRA 层
+for name, param in model.named_parameters():
+    if 'lora' not in name:
+        param.requires_grad = False
+
+# 收集 LoRA 可训练参数
+lora_params = []
+for name, param in model.named_parameters():
+    if 'lora' in name:
+        lora_params.append(param)
+
+# 构建优化器，仅优化 LoRA 参数
+optimizer = optim.AdamW(lora_params, lr=args.learning_rate)
+
+# 构建数据集，这里复用SFT的数据加载器
+train_ds = SFTDataset(args.data_path, tokenizer, max_length=args.max_seq_len)
+
+# 如果使用分布式训练（DDP），使用 DistributedSampler 划分数据
+train_sampler = DistributedSampler(train_ds) if ddp else None
+
+# 构建数据加载器
+train_loader = DataLoader(
+    train_ds,
+    batch_size=args.batch_size,
+    pin_memory=True,
+    drop_last=False,
+    shuffle=False,  # 如果用 DDP，不能设置 shuffle
+    num_workers=args.num_workers,
+    sampler=train_sampler
+)
+
+# 使用自动混合精度（AMP），加速训练、节省显存，仅当使用 float16 或 bfloat16 时启用
+scaler = torch.cuda.amp.GradScaler(enabled=(args.dtype in ['float16', 'bfloat16']))
+
+# 每个 epoch 的迭代次数
+iter_per_epoch = len(train_loader)
+
+# 开始训练多个 epoch
+for epoch in range(args.epochs):
+    train_epoch(epoch, wandb)  # 执行单轮训练，wandb 可用于记录训练日志
+    

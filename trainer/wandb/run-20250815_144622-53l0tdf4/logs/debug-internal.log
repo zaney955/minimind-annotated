@@ -1,0 +1,17 @@
+{"time":"2025-08-15T14:46:22.262821418+08:00","level":"INFO","msg":"using version","core version":"0.18.3"}
+{"time":"2025-08-15T14:46:22.262850421+08:00","level":"INFO","msg":"created symlink","path":"/home/user/workspace/minimind/trainer/wandb/run-20250815_144622-53l0tdf4/logs/debug-core.log"}
+{"time":"2025-08-15T14:46:22.270855474+08:00","level":"ERROR","msg":"dialing: google: could not find default credentials. See https://cloud.google.com/docs/authentication/external/set-up-adc for more information"}
+{"time":"2025-08-15T14:46:22.285010157+08:00","level":"INFO","msg":"created new stream","id":"53l0tdf4"}
+{"time":"2025-08-15T14:46:22.285063836+08:00","level":"INFO","msg":"stream: started","id":"53l0tdf4"}
+{"time":"2025-08-15T14:46:22.285097512+08:00","level":"INFO","msg":"handler: started","stream_id":{"value":"53l0tdf4"}}
+{"time":"2025-08-15T14:46:22.285191916+08:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"53l0tdf4"}}
+{"time":"2025-08-15T14:46:22.285218146+08:00","level":"INFO","msg":"sender: started","stream_id":{"value":"53l0tdf4"}}
+{"time":"2025-08-15T14:46:52.286777142+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2025-08-15T14:47:24.490620872+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2025-08-15T14:47:52.97492683+08:00","level":"INFO","msg":"stream: closing","id":"53l0tdf4"}
+{"time":"2025-08-15T14:47:52.975076581+08:00","level":"ERROR","msg":"sender: upsertRun:","error":"failed to upsert bucket: api: failed sending: POST https://api.wandb.ai/graphql giving up after 3 attempt(s): context canceled"}
+{"time":"2025-08-15T14:47:52.975105156+08:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"53l0tdf4"}}
+{"time":"2025-08-15T14:47:52.975189934+08:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"53l0tdf4"}}
+{"time":"2025-08-15T14:47:52.975289773+08:00","level":"ERROR","msg":"runwork: ignoring record after close","work":{"Record":{"RecordType":{"Request":{"RequestType":{"Defer":{}}}},"control":{"always_send":true}}}}
+{"time":"2025-08-15T14:47:52.97658659+08:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"53l0tdf4"}}
+{"time":"2025-08-15T14:47:52.976614917+08:00","level":"INFO","msg":"stream: closed","id":"53l0tdf4"}

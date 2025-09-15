@@ -1,0 +1,23 @@
+{"time":"2025-08-15T14:54:40.597370898+08:00","level":"INFO","msg":"using version","core version":"0.18.3"}
+{"time":"2025-08-15T14:54:40.59738581+08:00","level":"INFO","msg":"created symlink","path":"/home/user/workspace/minimind/trainer/wandb/run-20250815_145440-aqj1xa6o/logs/debug-core.log"}
+{"time":"2025-08-15T14:54:40.601277245+08:00","level":"ERROR","msg":"dialing: google: could not find default credentials. See https://cloud.google.com/docs/authentication/external/set-up-adc for more information"}
+{"time":"2025-08-15T14:54:40.613268136+08:00","level":"INFO","msg":"created new stream","id":"aqj1xa6o"}
+{"time":"2025-08-15T14:54:40.613309799+08:00","level":"INFO","msg":"stream: started","id":"aqj1xa6o"}
+{"time":"2025-08-15T14:54:40.613337961+08:00","level":"INFO","msg":"sender: started","stream_id":{"value":"aqj1xa6o"}}
+{"time":"2025-08-15T14:54:40.613326638+08:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"aqj1xa6o"}}
+{"time":"2025-08-15T14:54:40.613405356+08:00","level":"INFO","msg":"handler: started","stream_id":{"value":"aqj1xa6o"}}
+{"time":"2025-08-15T14:54:41.798893229+08:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2025-08-15T14:54:41.800319152+08:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-08-15T14:58:15.729943551+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/files/zaney/MiniMind-Pretrain/aqj1xa6o/file_stream\": read tcp 10.10.10.90:35382->10.10.10.126:7890: read: connection reset by peer"}
+{"time":"2025-08-15T15:34:45.738112667+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/files/zaney/MiniMind-Pretrain/aqj1xa6o/file_stream\": read tcp 10.10.10.90:53848->10.10.10.126:7890: read: connection reset by peer"}
+{"time":"2025-08-15T15:46:30.741897056+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/files/zaney/MiniMind-Pretrain/aqj1xa6o/file_stream\": read tcp 10.10.10.90:52660->10.10.10.126:7890: read: connection reset by peer"}
+{"time":"2025-08-15T15:56:01.865164742+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/files/zaney/MiniMind-Pretrain/aqj1xa6o/file_stream\": EOF"}
+{"time":"2025-08-15T15:57:00.740952633+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/files/zaney/MiniMind-Pretrain/aqj1xa6o/file_stream\": read tcp 10.10.10.90:57756->10.10.10.126:7890: read: connection reset by peer"}
+{"time":"2025-08-15T16:05:55.961202181+08:00","level":"INFO","msg":"stream: closing","id":"aqj1xa6o"}
+{"time":"2025-08-15T16:05:55.961270301+08:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2025-08-15T16:05:55.969670905+08:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2025-08-15T16:05:59.627091717+08:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-08-15T16:06:00.191015708+08:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"aqj1xa6o"}}
+{"time":"2025-08-15T16:06:00.191110479+08:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"aqj1xa6o"}}
+{"time":"2025-08-15T16:06:00.191125853+08:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"aqj1xa6o"}}
+{"time":"2025-08-15T16:06:00.191220377+08:00","level":"INFO","msg":"stream: closed","id":"aqj1xa6o"}

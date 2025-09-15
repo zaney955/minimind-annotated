@@ -31,50 +31,85 @@ def get_lr(current_step, total_steps, lr):
 
 
 def train_epoch(epoch, wandb):
-    # 思考标签占位符
+    # 处理标签中的特殊占位符 token（用于思考链等任务）
     start_of_think_ids = tokenizer('<think>').input_ids
     end_of_think_ids = tokenizer('</think>').input_ids
     start_of_answer_ids = tokenizer('<answer>').input_ids
     end_of_answer_ids = tokenizer('</answer>').input_ids
-    loss_fct = nn.CrossEntropyLoss(reduction='none')
+
+    loss_fct = nn.CrossEntropyLoss(reduction='none')  # 不加权平均，为了后续自定义加权
     start_time = time.time()
+
     for step, (X, Y, loss_mask) in enumerate(train_loader):
+        # X: [batch_size, seq_len] - 输入 token 序列
+        # Y: [batch_size, seq_len] - 目标 token 序列（label）
+        # loss_mask: [batch_size, seq_len] - loss 权重掩码，1 表示参与 loss，0 表示忽略
+
         X = X.to(args.device)
         Y = Y.to(args.device)
         loss_mask = loss_mask.to(args.device)
-        lr = get_lr(epoch * iter_per_epoch + step, args.epochs * iter_per_epoch, args.learning_rate)
+
+        # 更新学习率（逐步衰减）
+        lr = get_lr(
+            epoch * iter_per_epoch + step,
+            args.epochs * iter_per_epoch,
+            args.learning_rate
+        )
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
 
-        with ctx:
+        with ctx:  # 混合精度上下文
             res = model(X)
+            # res.logits: [batch_size, seq_len, vocabulary_size]
+            # 将 logits reshape 为 [batch_size * seq_len, vocabulary_size]
+            # 将 labels reshape 为 [batch_size * seq_len]
             loss = loss_fct(
-                res.logits.view(-1, res.logits.size(-1)),
-                Y.view(-1)
-            ).view(Y.size())
-            sp_ids = torch.isin(Y.view(-1),
-                                torch.tensor(start_of_think_ids + end_of_think_ids
-                                             + start_of_answer_ids + end_of_answer_ids
-                                             ).to(args.device))
-            # 在 sp_ids 对应的位置增加额外的惩罚
-            loss_mask = loss_mask.view(-1)
-            loss_mask_sum = loss_mask.sum()
-            loss_mask[sp_ids] = 10
-            loss_mask = loss_mask.view(Y.size())
+                res.logits.view(-1, res.logits.size(-1)),  # [batch_size * seq_len, vocabulary_size]
+                Y.view(-1)                                  # [batch_size * seq_len]
+            ).view(Y.size())  # reshape 回 [batch_size, seq_len]，便于与 mask 对应
+
+            # 识别出特殊 token 所在位置，用于增强 loss 权重
+            special_token_mask = torch.isin(
+                Y.view(-1),
+                torch.tensor(
+                    start_of_think_ids +
+                    end_of_think_ids +
+                    start_of_answer_ids +
+                    end_of_answer_ids
+                ).to(args.device)
+            )
+
+            # 增强特殊 token 的 loss 惩罚权重
+            loss_mask = loss_mask.view(-1)                      # [batch_size * seq_len]
+            loss_mask_sum = loss_mask.sum()                     # 总有效 token 数
+            loss_mask[special_token_mask] = 10                  # 提升特殊 token loss 权重为 10,标签内的tokens并的并未改变
+            loss_mask = loss_mask.view(Y.size())                # reshape 回 [batch_size, seq_len]
+
+            # 应用 mask 后计算最终 loss
+            # loss: scalar，单个样本平均 loss（考虑 mask 权重）
             loss = (loss * loss_mask).sum() / loss_mask_sum
+
+            # 加入辅助 loss（例如知识蒸馏用到的 loss）
             loss += res.aux_loss
+
+            # 梯度累积
             loss = loss / args.accumulation_steps
 
+        # 自动混合精度训练
         scaler.scale(loss).backward()
 
+        # 每 accumulation_steps 步执行一次反向传播更新
         if (step + 1) % args.accumulation_steps == 0:
-            scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
+            scaler.unscale_(optimizer)  # 取消缩放用于梯度裁剪
+            torch.nn.utils.clip_grad_norm_(
+                model.parameters(),
+                args.grad_clip
+            )  # 梯度裁剪，防止梯度爆炸
 
-            scaler.step(optimizer)
-            scaler.update()
+            scaler.step(optimizer)  # optimizer 更新权重
+            scaler.update()        # 更新缩放器
 
-            optimizer.zero_grad(set_to_none=True)
+            optimizer.zero_grad(set_to_none=True)  # 清空梯度以备下次迭代
 
         if step % args.log_interval == 0:
             spend_time = time.time() - start_time
@@ -109,7 +144,7 @@ def train_epoch(epoch, wandb):
 
 
 def init_model(lm_config):
-    tokenizer = AutoTokenizer.from_pretrained('../model')
+    tokenizer = AutoTokenizer.('../model')
     model = MiniMindForCausalLM(lm_config)
     moe_path = '_moe' if lm_config.use_moe else ''
     ckp = f'{args.save_dir}/rlhf_{lm_config.hidden_size}{moe_path}.pth'

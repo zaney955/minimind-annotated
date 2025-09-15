@@ -1,0 +1,13 @@
+{"time":"2025-08-15T16:08:58.655759379+08:00","level":"INFO","msg":"using version","core version":"0.18.3"}
+{"time":"2025-08-15T16:08:58.655779334+08:00","level":"INFO","msg":"created symlink","path":"/home/user/workspace/minimind/trainer/wandb/run-20250815_160858-vrphyk1l/logs/debug-core.log"}
+{"time":"2025-08-15T16:08:58.692178321+08:00","level":"ERROR","msg":"dialing: google: could not find default credentials. See https://cloud.google.com/docs/authentication/external/set-up-adc for more information"}
+{"time":"2025-08-15T16:08:58.705082062+08:00","level":"INFO","msg":"created new stream","id":"vrphyk1l"}
+{"time":"2025-08-15T16:08:58.705117302+08:00","level":"INFO","msg":"stream: started","id":"vrphyk1l"}
+{"time":"2025-08-15T16:08:58.705142734+08:00","level":"INFO","msg":"handler: started","stream_id":{"value":"vrphyk1l"}}
+{"time":"2025-08-15T16:08:58.7052191+08:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"vrphyk1l"}}
+{"time":"2025-08-15T16:08:58.705233005+08:00","level":"INFO","msg":"sender: started","stream_id":{"value":"vrphyk1l"}}
+{"time":"2025-08-15T16:08:59.903200608+08:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2025-08-15T16:08:59.904579337+08:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-08-15T16:14:33.960505599+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/files/zaney/MiniMind-Full-SFT/vrphyk1l/file_stream\": read tcp 10.10.10.90:56138->10.10.10.126:7890: read: connection reset by peer"}
+{"time":"2025-08-15T16:32:48.967924921+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/files/zaney/MiniMind-Full-SFT/vrphyk1l/file_stream\": read tcp 10.10.10.90:48994->10.10.10.126:7890: read: connection reset by peer"}
+{"time":"2025-08-15T16:34:48.966984189+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/files/zaney/MiniMind-Full-SFT/vrphyk1l/file_stream\": read tcp 10.10.10.90:55836->10.10.10.126:7890: read: connection reset by peer"}

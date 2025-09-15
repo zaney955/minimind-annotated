@@ -32,83 +32,121 @@ def get_lr(current_step, total_steps, lr):
 
 
 def distillation_loss_fn(student_logits, teacher_logits, temperature=1.0, reduction='batchmean'):
+    # student_logits: 学生模型的原始logits (batch_size, seq_len, vocab_size)
+    # teacher_logits: 教师模型的原始logits (batch_size, seq_len, vocab_size)
+
+    # --- 1. 计算教师概率分布（soft targets） ---
     with torch.no_grad():
-        teacher_probs = F.softmax(teacher_logits / temperature, hidden_size=-1).detach()
+        # teacher_probs: (batch_size, seq_len, vocab_size)，每个位置的概率分布，softmax 后每行加和为1
+        teacher_probs = F.softmax(teacher_logits / temperature, dim=-1).detach()  # .detach() → 避免反向传播进教师模型。
 
-    student_log_probs = F.log_softmax(student_logits / temperature, hidden_size=-1)
+    # --- 2. 计算学生的 log softmax ---
+    # student_log_probs: (batch_size, seq_len, vocab_size)，log 概率，用于 KL 散度计算
+    student_log_probs = F.log_softmax(student_logits / temperature, dim=-1)
 
+    # --- 3. 计算 KL 散度 ---
+    # KL(P_teacher || P_student)：蒸馏损失，衡量教师分布和学生分布的差距
+    # 用法有点“坑”，因为输入需要是 log 概率 和 概率，而不是两个概率分布直接丢进去
     kl = F.kl_div(
-        student_log_probs,
-        teacher_probs,
-        reduction=reduction
+        student_log_probs,     # Input log-probabilities from student
+        teacher_probs,         # Target probabilities from teacher
+        reduction=reduction    # 默认 reduction='batchmean'：结果会除以 batch_size（而不是 token 总数）
     )
+
+    # --- 4. 温度缩放补偿 ---
+    # 因为 logits 除以了 temperature，所以梯度变小了，需要乘 T^2 来保持梯度 scale 一致
     return (temperature ** 2) * kl
+
 
 
 def train_epoch(epoch, wandb, alpha=0.0, temperature=1.0):
     start_time = time.time()
 
+    # 设置教师模型为 eval 模式，不参与梯度计算
     if teacher_model is not None:
         teacher_model.eval()
         teacher_model.requires_grad_(False)
 
+    # 遍历一个 epoch 中所有的 batch
     for step, (X, Y, loss_mask) in enumerate(train_loader):
+        # X: [batch_size, seq_len]，模型输入
+        # Y: [batch_size, seq_len]，ground truth label（一般是右移的 X）
+        # loss_mask: [batch_size, seq_len]，标记有效位置
+
         X = X.to(args.device)
         Y = Y.to(args.device)
         loss_mask = loss_mask.to(args.device)
+
+        # 获取当前 step 的学习率（可选 warmup/cosine）
         lr = get_lr(epoch * iter_per_epoch + step,
                     args.epochs * iter_per_epoch,
                     args.learning_rate)
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
 
-        # 前向传播（学生模型）
-        with ctx:
-            res = model(X)
-            student_logits = res.logits
+        # === 学生模型前向传播 ===
+        with ctx:  # 支持 mixed precision
+            res = model(X)  # forward pass
+            student_logits = res.logits  
+            # student_logits: [batch_size, seq_len, vocab_size]
 
-        # 教师模型前向传播（只在eval & no_grad）
+        # === 教师模型前向传播 ===
         if teacher_model is not None:
             with torch.no_grad():
                 teacher_logits = teacher_model(X).logits
-                vocab_size_student = student_logits.size(-1)  # N
-                teacher_logits = teacher_logits[..., :vocab_size_student]
+                # teacher_logits: [batch_size, seq_len, vocab_size_teacher]
 
-        # ========== 计算损失 ==========
-        # 1) Ground-Truth CE Loss（可选）
-        loss_mask_flat = loss_mask.view(-1)
+                vocab_size_student = student_logits.size(-1)
+                teacher_logits = teacher_logits[..., :vocab_size_student]  # 如果学生词表比教师小，需要切片对齐，避免词表不一致
+
+        # === Cross Entropy Loss（标准监督训练）（硬标签）===
+        loss_mask_flat = loss_mask.view(-1)  
+        # loss_mask_flat: [batch_size * seq_len]
+
         ce_loss = F.cross_entropy(
-            student_logits.view(-1, student_logits.size(-1)),
-            Y.view(-1),
-            ignore_index=0,
+            student_logits.view(-1, student_logits.size(-1)),  # [batch_size * seq_len, vocab_size]
+            Y.view(-1),  # [batch_size * seq_len]
+            ignore_index=0,  # 忽略 padding token
             reduction='none'
-        )
+        )  # ce_loss: [batch_size * seq_len]，逐 token loss
+        
         ce_loss = torch.sum(ce_loss * loss_mask_flat) / loss_mask_flat.sum()
+        # mask 生效，仅统计有效 token 的平均 loss
+
+
+        # 若模型为 MoE（Mixture of Experts），加上稀疏门控损失
         if lm_config_student.use_moe:
             ce_loss += res.aux_loss
 
-        # 2) Distillation Loss（可选）
+        # === Distillation Loss（知识蒸馏）（软标签）===
         if teacher_model is not None:
-            # 只在有效token位置做蒸馏
+            # 筛选有效位置再计算 KL 蒸馏 loss
+            student_logits_flat = student_logits.view(-1, student_logits.size(-1))  # [batch_size * seq_len, vocab_size]
+            teacher_logits_flat = teacher_logits.view(-1, teacher_logits.size(-1))  # 同上
+
             distill_loss = distillation_loss_fn(
-                student_logits.view(-1, student_logits.size(-1))[loss_mask_flat == 1],
-                teacher_logits.view(-1, teacher_logits.size(-1))[loss_mask_flat == 1],
+                student_logits_flat[loss_mask_flat == 1],  # [num_valid_tokens, vocab_size]
+                teacher_logits_flat[loss_mask_flat == 1],  # [num_valid_tokens, vocab_size]
                 temperature=temperature
-            )
+            )  # 一般为 soft cross-entropy 或 KLDivLoss ;只在 mask=1 的 token 上计算 KD loss
         else:
             distill_loss = torch.tensor(0.0, device=args.device)
 
-        # 3) 总损失 = alpha * CE + (1-alpha) * Distill
+        # === 总损失（加权融合）===
+        # alpha 越大，越靠 ground-truth；越小，越依赖 teacher
         loss = (alpha * ce_loss + (1 - alpha) * distill_loss) / args.accumulation_steps
+        # 注意：这里支持梯度累积（accumulation_steps > 1）
 
+        # 反向传播（支持 AMP 自动混合精度）
         scaler.scale(loss).backward()
 
+        # 每 accumulation_steps 次才执行一次优化器更新
         if (step + 1) % args.accumulation_steps == 0:
-            scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
-            scaler.step(optimizer)
-            scaler.update()
-            optimizer.zero_grad(set_to_none=True)
+            scaler.unscale_(optimizer)  # 解除 AMP 放大
+            torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)  # 梯度裁剪
+            scaler.step(optimizer)  # 优化器更新
+            scaler.update()  # AMP 更新 scaler
+            optimizer.zero_grad(set_to_none=True)  # 清空梯度
 
         if step % args.log_interval == 0:
             spend_time = time.time() - start_time

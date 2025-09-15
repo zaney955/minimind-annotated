@@ -97,7 +97,8 @@ def init_model(lm_config):
     tokenizer = AutoTokenizer.from_pretrained('../model')
     model = MiniMindForCausalLM(lm_config)
     moe_path = '_moe' if lm_config.use_moe else ''
-    ckp = f'{args.save_dir}/pretrain_{lm_config.hidden_size}{moe_path}.pth'
+    # ckp = f'{args.save_dir}/pretrain_{lm_config.hidden_size}{moe_path}.pth'
+    ckp = f'{args.save_dir}/rlhf_{lm_config.hidden_size}{moe_path}.pth'
     state_dict = torch.load(ckp, map_location=args.device)
     model.load_state_dict(state_dict, strict=False)
 
@@ -138,9 +139,9 @@ if __name__ == "__main__":
     parser.add_argument('--local_rank', type=int, default=-1)
     parser.add_argument('--hidden_size', default=512, type=int)
     parser.add_argument('--num_hidden_layers', default=8, type=int)
-    parser.add_argument('--max_seq_len', default=512, type=int)
+    parser.add_argument('--max_seq_len', default=512, type=int) # 2048 修改为数据集长度（每条数据字符最大长度）
     parser.add_argument('--use_moe', default=False, type=bool)
-    parser.add_argument("--data_path", type=str, default="../dataset/sft_mini_512.jsonl")
+    parser.add_argument("--data_path", type=str, default="../dataset/sft_mini_512.jsonl") # sft_2048.jsonl
 
     args = parser.parse_args()
 

@@ -1,0 +1,19 @@
+{"time":"2025-08-15T17:19:12.858365683+08:00","level":"INFO","msg":"using version","core version":"0.18.3"}
+{"time":"2025-08-15T17:19:12.858388546+08:00","level":"INFO","msg":"created symlink","path":"/home/user/workspace/minimind/trainer/wandb/run-20250815_171912-bdeljr7e/logs/debug-core.log"}
+{"time":"2025-08-15T17:19:12.895666009+08:00","level":"ERROR","msg":"dialing: google: could not find default credentials. See https://cloud.google.com/docs/authentication/external/set-up-adc for more information"}
+{"time":"2025-08-15T17:19:12.911872702+08:00","level":"INFO","msg":"created new stream","id":"bdeljr7e"}
+{"time":"2025-08-15T17:19:12.91191637+08:00","level":"INFO","msg":"stream: started","id":"bdeljr7e"}
+{"time":"2025-08-15T17:19:12.911950055+08:00","level":"INFO","msg":"handler: started","stream_id":{"value":"bdeljr7e"}}
+{"time":"2025-08-15T17:19:12.912048551+08:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"bdeljr7e"}}
+{"time":"2025-08-15T17:19:12.912072242+08:00","level":"INFO","msg":"sender: started","stream_id":{"value":"bdeljr7e"}}
+{"time":"2025-08-15T17:19:13.947624683+08:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2025-08-15T17:19:13.94905055+08:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-08-15T17:29:33.029472434+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/files/zaney/MiniMind-RLHF-SFT/bdeljr7e/file_stream\": read tcp 10.10.10.90:54896->10.10.10.126:7890: read: connection reset by peer"}
+{"time":"2025-08-15T17:42:51.433274232+08:00","level":"INFO","msg":"stream: closing","id":"bdeljr7e"}
+{"time":"2025-08-15T17:42:51.433338272+08:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2025-08-15T17:42:51.442713888+08:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2025-08-15T17:42:55.239804421+08:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-08-15T17:42:56.110300357+08:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"bdeljr7e"}}
+{"time":"2025-08-15T17:42:56.110368419+08:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"bdeljr7e"}}
+{"time":"2025-08-15T17:42:56.110412266+08:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"bdeljr7e"}}
+{"time":"2025-08-15T17:42:56.110506455+08:00","level":"INFO","msg":"stream: closed","id":"bdeljr7e"}
