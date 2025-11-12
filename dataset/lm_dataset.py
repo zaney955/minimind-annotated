@@ -59,11 +59,12 @@ class PretrainDataset(Dataset):
         loss_mask = (
             input_ids != self.tokenizer.pad_token_id
         )  # shape: [max_length]，bool类型
+        # 也可写成 loss_mask = encoding.attention_mask.squeeze()
 
         # 语言模型是自回归的，使用前一个token预测下一个
-        X = torch.tensor(input_ids[:-1], dtype=torch.long)  # 输入：[0, ..., n-2]
-        Y = torch.tensor(input_ids[1:], dtype=torch.long)  # 目标：[1, ..., n-1]
-        loss_mask = torch.tensor(loss_mask[1:], dtype=torch.long)  # loss_mask对齐目标Y
+        X = torch.tensor(input_ids[:-1], dtype=torch.long)  # 输入：[0, ..., n-2], shape [max_length-1]
+        Y = torch.tensor(input_ids[1:], dtype=torch.long)  # 目标：[1, ..., n-1], shape [max_length-1]
+        loss_mask = torch.tensor(loss_mask[1:], dtype=torch.long)  #  只对 Y 的位置计算 loss, shape [max_length-1]
 
         return X, Y, loss_mask
 
@@ -299,9 +300,9 @@ if __name__ == "__main__":
     from transformers import AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained(r"./model/")
-    # pretrain_dataset = PretrainDataset(
-    #     r"./dataset/pretrain_hq.jsonl", tokenizer, max_length=2048
-    # )
+    pretrain_dataset = PretrainDataset(
+        r"./dataset/pretrain_hq.jsonl", tokenizer, max_length=2048
+    )
     # # x, y, mask = pretrain_dataset[0]
     # # print(x, y, mask)
 
@@ -319,5 +320,5 @@ if __name__ == "__main__":
     #     [print(i.shape) for i in item]
     #     break
 
-    sftdataset = SFTDataset(r"./dataset/sft_2048.jsonl", tokenizer, max_length=1024)
-    print(sftdataset.bos_id)
+    # sftdataset = SFTDataset(r"./dataset/sft_2048.jsonl", tokenizer, max_length=1024)
+    # print(sftdataset.bos_id)

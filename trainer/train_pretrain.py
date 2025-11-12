@@ -31,7 +31,7 @@ def get_lr(current_step, total_steps, lr):
     cos_lr = 0.5 * lr * (1 + 
                          math.cos(math.pi * current_step / total_steps) # 余弦退火公式: 初始时= cos(0) = 1→ 初始时 lr 接近 lr; 结束时= cos(pi) = -1 → 结束时 lr → 0
                          )
-    min_lr = lr / 10 # 给 lr 加了一个 最低 lr（floor），避免 lr 降为
+    min_lr = lr / 10 # 给 lr 加了一个 最低 lr（floor），避免 lr 降为 0
     return cos_lr + min_lr
 # lr
 # ^
@@ -46,7 +46,7 @@ def get_lr(current_step, total_steps, lr):
 # |                      .
 # |                          .
 # |                                .
-# +-----------------------------------> step
+# +-----------------------------------> total_step
 
 
 def train_epoch(epoch, wandb):
@@ -71,7 +71,7 @@ def train_epoch(epoch, wandb):
             res = model(X)  # 前向传播，res.logits: [batch, seq_len, vocab_size]
             loss = loss_fct(res.logits.view(-1, res.logits.size(-1)),  # 转为2D: [batch*seq_len, vocab_size]
                             Y.view(-1)  # 展平目标: [batch*seq_len]
-                            ).view(Y.size())
+                            ).view(Y.size())  # -> [batch, seq_len]
             
             loss = (loss * loss_mask).sum( # 总的有效 loss
                 ) / loss_mask.sum()  # loss_mask.sum() 统计了所有有效 token 的数量
@@ -194,7 +194,7 @@ if __name__ == "__main__":
 
     args.wandb_run_name = f"MiniMind-Pretrain-Epoch-{args.epochs}-BatchSize-{args.batch_size}-LearningRate-{args.learning_rate}"
 
-    # 如果当前设备是 CPU，就没有必要用 AMP，于是用 nullcontext() 占位；如果是 GPU，就启用 autocast()，利用混合精度。
+    # 如果当前设备是 CPU，就没有必要用 AMP，于是用 nullcontext() 占位；如果是 GPU，就启用 autocast()，利用混合精度（torch.cuda.amp 只支持GPU）。
     ctx = nullcontext() if device_type == "cpu" else torch.cuda.amp.autocast()
 
     ddp = int(os.environ.get("RANK", -1)) != -1  # is this a ddp run?
@@ -221,7 +221,7 @@ if __name__ == "__main__":
 
     model, tokenizer = init_model(lm_config)
     train_ds = PretrainDataset(args.data_path, tokenizer, max_length=args.max_seq_len)
-    train_sampler = DistributedSampler(train_ds) if ddp else None
+    train_sampler = DistributedSampler(train_ds) if ddp else None  # DistributedSampler：分布式训练时必备。作用：确保不同 GPU 进程拿到的数据 不重叠。每个 epoch 还会调用 train_sampler.set_epoch(epoch) 来重新打乱。
     train_loader = DataLoader(
         train_ds,
         batch_size=args.batch_size,
